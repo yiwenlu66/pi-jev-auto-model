@@ -154,6 +154,8 @@ export default function (pi) {
   const profileCache = new Map();
   let pending = null;
   let defaultsAtStart = null; // { provider, model } captured at session_start
+  // pi-subagents marks child sessions; never drift-repair inside a child.
+  const isChild = !!process.env.PI_SUBAGENT_EXTENSION_BINDINGS;
 
   const log = (msg) => process.stderr.write(`[jev-auto] ${msg}\n`);
   const getCfg = () => (cfg ??= loadConfig());
@@ -222,6 +224,7 @@ export default function (pi) {
         const s = JSON.parse(fs.readFileSync(path.join(os.homedir(), ".pi/agent/settings.json"), "utf8"));
         defaultsAtStart = { provider: s.defaultProvider, model: s.defaultModel };
       } catch {}
+      if (isChild) return;
       // Only interactive sessions: in print/json mode an explicit --model must win.
       if (ctx.mode !== "tui" && ctx.mode !== "rpc") return;
       if ((event.reason !== "new" && event.reason !== "startup") || hasUserHistory(ctx)) return;
@@ -267,9 +270,12 @@ export default function (pi) {
   });
 
   // --- Subagent routing: resolve placeholder/absent model on subagent_spawn ---
+  // (parent-side interception; disable with "spawnInterception": false to rely on
+  // child-side first-prompt routing in async/runner-host children)
   pi.on("tool_call", async (event, ctx) => {
     if (event.toolName !== "subagent_spawn") return;
     try {
+      if (getCfg().spawnInterception === false) return;
       const args = event.input ?? {};
       const subId = Object.keys(getCfg().profiles ?? {}).find((k) => k.includes("subagent"));
       if (!subId) return;
