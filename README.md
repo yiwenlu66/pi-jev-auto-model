@@ -30,8 +30,15 @@ fractions of a cent (jev input ≈ $0.04/Mtok, output free).
 
 ## Install
 
+Add the package to `~/.pi/agent/settings.json`:
+
+```json
+"packages": ["git:github.com/yiwenlu66/pi-jev-auto-model"]
+```
+
+Then `/reload` (or restart pi). Alternatively, clone anywhere and symlink the extension:
+
 ```sh
-# clone into pi's global git packages (or anywhere) and link the extension
 git clone https://github.com/yiwenlu66/pi-jev-auto-model ~/.pi/agent/git/github.com/yiwenlu66/pi-jev-auto-model
 mkdir -p ~/.pi/agent/extensions/jev-auto-model
 ln -s ~/.pi/agent/git/github.com/yiwenlu66/pi-jev-auto-model/extensions/index.ts \
