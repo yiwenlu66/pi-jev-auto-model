@@ -110,6 +110,9 @@ A profile is the whole routing policy, as data. See `examples/profile.example.js
   personalities, prices, and quotas belong. Keep each entry 2–4 sentences.
 - `levels` — per-model thinking-level criteria (second jev question). One level = no second call.
 - `fallback` — used when jev or the network fails; the session still works.
+- `sampling` — optional, default `false`. When `true`, model and level are sampled from
+  jev's probability distribution instead of argmax: a fan-out of similar subagent tasks
+  spreads across suitable models instead of all landing on the same pick.
 
 Model ids must exist in your `models.json` as `provider/model-id`.
 
