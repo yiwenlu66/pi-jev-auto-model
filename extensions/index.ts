@@ -86,6 +86,16 @@ async function jevAsk(cfg, state, questions) {
   return await r.json();
 }
 
+/** Weighted sample from a jev probability map; returns null if empty/degenerate. */
+function sampleFrom(probs) {
+  const entries = Object.entries(probs ?? {}).filter(([, v]) => typeof v === "number" && v > 0);
+  if (entries.length === 0) return null;
+  const total = entries.reduce((s, [, v]) => s + v, 0);
+  let r = Math.random() * total;
+  for (const [k, v] of entries) { r -= v; if (r <= 0) return k; }
+  return entries[entries.length - 1][0];
+}
+
 function splitModelId(full) {
   const i = full.indexOf("/");
   if (i < 0) throw new Error(`profile model id must be provider/model, got ${full}`);
@@ -105,8 +115,8 @@ async function jevSelect(cfg, profile, state) {
   const a1 = await jevAsk(cfg, truncated, {
     model: { type: "choice", instructions: profile.instructions, criteria: modelCriteria },
   });
-  const chosenId = a1.answers.model.choice;
   const modelProbs = a1.answers.model.probabilities;
+  const chosenId = (profile.sampling === true && sampleFrom(modelProbs)) || a1.answers.model.choice;
   const entry = profile.models[chosenId];
   if (!entry) throw new Error(`jev returned model not in profile: ${chosenId}`);
 
@@ -123,8 +133,8 @@ async function jevSelect(cfg, profile, state) {
     const a2 = await jevAsk(cfg, truncated, {
       level: { type: "choice", instructions: instr, criteria: entry.levels },
     });
-    level = a2.answers.level.choice;
     levelProbs = a2.answers.level.probabilities;
+    level = (profile.sampling === true && sampleFrom(levelProbs)) || a2.answers.level.choice;
     if (!entry.levels[level]) level = entry.default_level ?? levelIds[0];
   }
   return { ...splitModelId(chosenId), level, modelProbs, levelProbs };
