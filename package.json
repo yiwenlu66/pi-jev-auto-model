@@ -1,0 +1,28 @@
+{
+  "name": "pi-jev-auto-model",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Pi extension that routes each session to a real model+thinking level via TypeSafe Jev (System One decision model): placeholder auto models in the catalog, hierarchical jev selection on the first prompt.",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "extension",
+    "jev",
+    "typesafe",
+    "model-router",
+    "auto-model"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yiwenlu66/pi-jev-auto-model.git"
+  },
+  "homepage": "https://github.com/yiwenlu66/pi-jev-auto-model#readme",
+  "bugs": {
+    "url": "https://github.com/yiwenlu66/pi-jev-auto-model/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module"
+}

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "kind": "jev-model-profile",
+  "name": "example-main",
+  "instructions": "You are selecting the LLM that will act as the user's main interactive coding agent for an entire session. The state is the user's first prompt. Weigh task difficulty, expected session length, autonomy required, and cost; prefer the cheapest model that will handle the session well.",
+  "models": {
+    "anthropic/claude-haiku-4-5": {
+      "when": "Routine, well-specified tasks: small fixes, simple scripts, quick lookups. Cheapest and fastest; weak for ambiguous or long-horizon work.",
+      "levels": {
+        "high": "Default; small models need full effort on agentic work."
+      },
+      "default_level": "high"
+    },
+    "anthropic/claude-sonnet-4-5": {
+      "when": "Balanced default for substantive software work: multi-file implementation, debugging, refactors. Best cost-per-capability in the middle tier.",
+      "levels": {
+        "medium": "Clear-spec implementation.",
+        "high": "Default for most substantive sessions."
+      },
+      "default_level": "high"
+    },
+    "anthropic/claude-opus-4-1": {
+      "when": "Hardest reasoning and longest documents: novel design, deep debugging, big refactors, high-stakes writing. Most expensive; choose only when clearly demanded.",
+      "levels": {
+        "high": "Hard but bounded reasoning.",
+        "max": "The very hardest problems; rare."
+      },
+      "default_level": "high"
+    }
+  },
+  "fallback": { "model": "anthropic/claude-sonnet-4-5", "level": "high" }
+}
