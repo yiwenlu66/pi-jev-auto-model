@@ -81,7 +81,9 @@ Placeholders are never actually called — the extension routes before the first
 
 `apiKey` accepts a literal, `"$ENV_VAR"`, or `"!shell command"`. A profile source can also be
 a URL (`{ "source": "url", "url": "https://…", "auth": "!…" }`) — e.g. a relay-hosted profile
-that injects live prices, quota and error statistics into the criteria hourly.
+that injects live prices, quota and error statistics into the criteria hourly. By default the
+auth value is sent as `Authorization: Bearer <auth>`; set `"authHeader": "x-my-token-header"` to
+send it under a custom header name instead.
 
 ### 3. Profiles
 
