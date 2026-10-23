@@ -51,7 +51,10 @@ function loadConfig() {
 async function fetchProfile(cfg, profCfg) {
   if (profCfg.source === "url" || profCfg.url) {
     const headers = { "User-Agent": "pi-jev-auto-model/0.1" };
-    if (profCfg.auth) headers["Authorization"] = `Bearer ${profCfg.auth}`;
+    if (profCfg.auth) {
+      if (profCfg.authHeader) headers[profCfg.authHeader] = profCfg.auth;
+      else headers["Authorization"] = `Bearer ${profCfg.auth}`;
+    }
     const r = await fetch(profCfg.url, { headers, signal: AbortSignal.timeout(cfg.timeoutMs ?? 15000) });
     if (!r.ok) throw new Error(`profile fetch ${profCfg.url}: HTTP ${r.status}`);
     return await r.json();
