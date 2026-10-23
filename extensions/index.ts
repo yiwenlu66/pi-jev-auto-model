@@ -55,9 +55,18 @@ async function fetchProfile(cfg, profCfg) {
       if (profCfg.authHeader) headers[profCfg.authHeader] = profCfg.auth;
       else headers["Authorization"] = `Bearer ${profCfg.auth}`;
     }
-    const r = await fetch(profCfg.url, { headers, signal: AbortSignal.timeout(cfg.timeoutMs ?? 15000) });
-    if (!r.ok) throw new Error(`profile fetch ${profCfg.url}: HTTP ${r.status}`);
-    return await r.json();
+    let lastErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const r = await fetch(profCfg.url, { headers, signal: AbortSignal.timeout(cfg.timeoutMs ?? 15000) });
+        if (!r.ok) throw new Error(`profile fetch ${profCfg.url}: HTTP ${r.status}`);
+        return await r.json();
+      } catch (e) {
+        lastErr = e;
+        if (attempt < 2) await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)));
+      }
+    }
+    throw lastErr;
   }
   return JSON.parse(fs.readFileSync(profCfg.path, "utf8"));
 }
@@ -153,7 +162,7 @@ export default function (pi) {
   let cfg = null;
   const profileCache = new Map();
   let pending = null;
-  let defaultsAtStart = null; // { provider, model } captured at session_start
+  let defaultsAtStart = null; // { provider, model, thinking } captured at session_start
   // pi-subagents marks child sessions; never drift-repair inside a child.
   const isChild = !!process.env.PI_SUBAGENT_EXTENSION_BINDINGS;
 
@@ -209,9 +218,11 @@ export default function (pi) {
       if (!defaultsAtStart) return;
       const p = path.join(os.homedir(), ".pi/agent/settings.json");
       const s = JSON.parse(fs.readFileSync(p, "utf8"));
-      if (s.defaultProvider === defaultsAtStart.provider && s.defaultModel === defaultsAtStart.model) return;
+    if (s.defaultProvider === defaultsAtStart.provider && s.defaultModel === defaultsAtStart.model &&
+        (!defaultsAtStart.thinking || s.defaultThinkingLevel === defaultsAtStart.thinking)) return;
       s.defaultProvider = defaultsAtStart.provider;
       s.defaultModel = defaultsAtStart.model;
+      if (defaultsAtStart.thinking) s.defaultThinkingLevel = defaultsAtStart.thinking;
       fs.writeFileSync(p, JSON.stringify(s, null, 2));
     } catch (e) { log(`restoreDefaultFile failed: ${e}`); }
   };
@@ -222,7 +233,7 @@ export default function (pi) {
       cfg = loadConfig();
       try {
         const s = JSON.parse(fs.readFileSync(path.join(os.homedir(), ".pi/agent/settings.json"), "utf8"));
-        defaultsAtStart = { provider: s.defaultProvider, model: s.defaultModel };
+        defaultsAtStart = { provider: s.defaultProvider, model: s.defaultModel, thinking: s.defaultThinkingLevel };
       } catch {}
       if (isChild) return;
       // Only interactive sessions: in print/json mode an explicit --model must win.
