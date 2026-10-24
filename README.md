@@ -127,6 +127,13 @@ Model ids must exist in your `models.json` as `provider/model-id`.
 
 - **First prompt only.** Detection: no prior user messages in the session and no routing
   marker. Resumed/forked sessions with history are never re-routed.
+- **Resume continuity.** If a runner reopens a conversation on its original placeholder,
+  the extension restores the latest concrete model and thinking level from the active
+  session branch before the next request, without calling jev. Native model-change and
+  successful assistant records are used; failed placeholder responses and other branches
+  cannot overwrite the selection. A concrete active model (including an explicit override)
+  is left alone. If the saved selection is missing or unavailable, input stops with an
+  explicit error asking you to select a concrete model.
 - **Failure policy.** jev/network errors fall back to the profile's `fallback` model — the
   prompt is never lost. Subagent routing failure leaves the spawn untouched (role default).
 - **Transparency.** Each routing posts a UI notification with the top-3 probabilities and
@@ -134,6 +141,11 @@ Model ids must exist in your `models.json` as `provider/model-id`.
 - **Defaults repair.** pi's `setModel` writes global defaults; after routing, the extension
   restores `settings.json`'s `defaultProvider/defaultModel` and resets fresh interactive
   sessions back to the placeholder.
+
+## Tests
+
+Run `npm test` for isolated resume-continuity and first-prompt routing regressions.
+The tests use temporary configuration and stub network calls; they require no credentials.
 
 ## License
 

@@ -268,6 +268,46 @@ export default function (pi) {
     try {
       if (!ctx.model || !isPlaceholder(ctx.model)) return { action: "continue" };
       const placeholderId = `${ctx.model.provider}/${ctx.model.id}`;
+      const branch = ctx.sessionManager.getBranch();
+      if (branch.some((e) => e.type === "message" && e.message.role === "user")) {
+        // Async runners may pass the launch placeholder/level again on resume,
+        // overriding Pi's native session restore. Reuse active-branch state;
+        // a failed placeholder response must not replace a concrete selection.
+        try {
+          let retainedModel = null;
+          let retainedLevel = null;
+          for (const entry of branch) {
+            if (entry.type === "thinking_level_change") retainedLevel = entry.thinkingLevel;
+            const candidate = entry.type === "model_change"
+              ? { provider: entry.provider, id: entry.modelId }
+              : entry.type === "message" && entry.message.role === "assistant" &&
+                  ["stop", "length", "toolUse"].includes(entry.message.stopReason)
+                ? { provider: entry.message.provider, id: entry.message.model }
+                : null;
+            if (candidate && candidate.provider && candidate.id && !isPlaceholder(candidate)) {
+              retainedModel = candidate;
+            }
+          }
+          if (!retainedModel || retainedLevel === null) {
+            throw new Error("no concrete model/thinking selection in the active session branch");
+          }
+          const model = ctx.modelRegistry.find(retainedModel.provider, retainedModel.id);
+          if (!model) throw new Error(`retained model ${retainedModel.provider}/${retainedModel.id} not in registry`);
+          try {
+            if (!(await pi.setModel(model))) throw new Error(`no auth for ${model.provider}/${model.id}`);
+            pi.setThinkingLevel(retainedLevel);
+          } finally {
+            restoreDefaultFile();
+          }
+          log(`retained ${model.provider}/${model.id}:${pi.getThinkingLevel()} on resume (no routing)`);
+          return { action: "continue" };
+        } catch (err) {
+          const message = `cannot resume ${placeholderId}: ${err?.message ?? err}; select a concrete model explicitly`;
+          log(message);
+          if (ctx.hasUI) ctx.ui.notify(message, "error");
+          return { action: "handled" };
+        }
+      }
       if (hasUserHistory(ctx) || alreadyRouted(ctx)) return { action: "continue" };
 
       pending ??= (async () => {
