@@ -23,6 +23,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 const MARKER = "jev-auto-model:routed:v1";
+const DEFAULT_EFFORT_INSTRUCTIONS = "Base the effort level on the task's reasoning needs and the per-level criteria for the selected model.";
 const STATE_FILE = path.join(os.homedir(), ".pi/agent/.jev-auto-state.json");
 const CONFIG_PATH = path.join(os.homedir(), ".pi/agent/jev-auto-model.json");
 
@@ -127,9 +128,11 @@ async function jevSelect(cfg, profile, state) {
   } else if (levelIds.length === 1) {
     level = levelIds[0];
   } else {
+    const effortInstructions = typeof profile.effort_instructions === "string" && profile.effort_instructions.trim()
+      ? profile.effort_instructions.trim() : DEFAULT_EFFORT_INSTRUCTIONS;
     const instr = `You already selected the model "${chosenId}" for this task. ` +
       `Now pick the thinking/reasoning effort level for the task on that model. ` +
-      `Model context: ${entry.when}`;
+      effortInstructions;
     const a2 = await jevAsk(cfg, truncated, {
       level: { type: "choice", instructions: instr, criteria: entry.levels },
     });

@@ -3,6 +3,7 @@
   "kind": "jev-model-profile",
   "name": "example-main",
   "instructions": "You are selecting the LLM that will act as the user's main interactive coding agent for an entire session. The state is the user's first prompt. Weigh task difficulty, expected session length, autonomy required, and cost; prefer the cheapest model that will handle the session well.",
+  "effort_instructions": "Choose effort based on the task's reasoning needs and the selected model's per-level criteria. Use higher effort for ambiguity, difficult reasoning, or complex dependencies; use lower effort for straightforward tasks.",
   "models": {
     "anthropic/claude-haiku-4-5": {
       "when": "Routine, well-specified tasks: small fixes, simple scripts, quick lookups. Cheapest and fastest; weak for ambiguous or long-horizon work.",

@@ -14,7 +14,8 @@ start sessions on them. The extension does the rest:
 2. The extension sends the prompt to jev as `state`, with a `choice` question whose criteria
    come from a **profile**: one entry per candidate model describing *when to use it*.
 3. jev picks a model; the extension asks jev a **second** choice question — which thinking
-   level, with per-level criteria from the profile (**hierarchical selection**).
+   level, with dedicated effort instructions and per-level criteria from the profile
+   (**hierarchical selection**). Model-routing context is used only in the first question.
 4. The session is switched to the selected `model:level` and stays there. Later prompts are
    not re-routed; manual `/model` changes are respected.
 5. On your next new session, the model is reset to the auto placeholder (pi's `setModel`
@@ -100,6 +101,7 @@ A profile is the whole routing policy, as data. See `examples/profile.example.js
 {
   "version": 1, "kind": "jev-model-profile", "name": "my-main",
   "instructions": "You are selecting the LLM for the main agent session. …",
+  "effort_instructions": "Choose effort based on the task's reasoning needs and the per-level criteria.",
   "models": {
     "anthropic/claude-sonnet-4-5": {
       "when": "Default for substantive coding work. …",
@@ -111,10 +113,16 @@ A profile is the whole routing policy, as data. See `examples/profile.example.js
 }
 ```
 
-- `instructions` — the top-level jev question. State what matters (task difficulty, session
-  length, cost posture).
-- `models.<provider>/<model>.when` — the criterion jev scores. This is where model
-  personalities, prices, and quotas belong. Keep each entry 2–4 sentences.
+- `instructions` — the model-selection jev question only. State what matters (task difficulty,
+  session length, cost posture).
+- `models.<provider>/<model>.when` — the model-selection criterion jev scores. This is where
+  model personalities, prices, quotas, and error statistics belong. Keep each entry 2–4 sentences.
+  Neither `instructions` nor `when` is included in the effort question.
+- `effort_instructions` — optional top-level string appended to the second question as dedicated
+  effort-selection policy, after the selected model is fixed. Keep model-routing context out of
+  this field and `levels`. Missing, non-string, empty, or whitespace-only values use the neutral
+  built-in instruction: "Base the effort level on the task's reasoning needs and the per-level
+  criteria for the selected model." Older profiles work unchanged; `when` is never a fallback.
 - `levels` — per-model thinking-level criteria (second jev question). One level = no second call.
 - `fallback` — used when jev or the network fails; the session still works.
 - `sampling` — optional, default `false`. When `true`, model and level are sampled from
@@ -144,7 +152,8 @@ Model ids must exist in your `models.json` as `provider/model-id`.
 
 ## Tests
 
-Run `npm test` for isolated resume-continuity and first-prompt routing regressions.
+Run `npm test` for isolated resume-continuity, first-prompt routing, and model/effort
+policy-separation regressions.
 The tests use temporary configuration and stub network calls; they require no credentials.
 
 ## License
