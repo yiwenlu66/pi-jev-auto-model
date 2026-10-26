@@ -183,7 +183,11 @@ export default function (pi) {
   const getCfg = () => (cfg ??= loadConfig());
   const getProfile = async (placeholderId) => {
     if (!profileCache.has(placeholderId)) {
-      profileCache.set(placeholderId, fetchProfile(getCfg(), getCfg().profiles[placeholderId]));
+      const request = fetchProfile(getCfg(), getCfg().profiles[placeholderId]).catch((err) => {
+        if (profileCache.get(placeholderId) === request) profileCache.delete(placeholderId);
+        throw err;
+      });
+      profileCache.set(placeholderId, request);
     }
     return profileCache.get(placeholderId);
   };
@@ -313,15 +317,17 @@ export default function (pi) {
       }
       if (hasUserHistory(ctx) || alreadyRouted(ctx)) return { action: "continue" };
 
+      // Reuse this attempt for fallback instead of refetching an evicted failure.
+      const profilePromise = getProfile(placeholderId);
       pending ??= (async () => {
-        const profile = await getProfile(placeholderId);
+        const profile = await profilePromise;
         const sel = await jevSelect(getCfg(), profile, event.text);
         await applySelection(ctx, placeholderId, sel);
       })();
       try {
         await pending;
       } catch (err) {
-        const profile = await getProfile(placeholderId).catch(() => null);
+        const profile = await profilePromise.catch(() => null);
         await applyFallback(ctx, placeholderId, profile, err?.message ?? err);
       } finally {
         pending = null;

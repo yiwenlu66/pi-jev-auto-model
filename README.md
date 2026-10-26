@@ -143,7 +143,11 @@ Model ids must exist in your `models.json` as `provider/model-id`.
   is left alone. If the saved selection is missing or unavailable, input stops with an
   explicit error asking you to select a concrete model.
 - **Failure policy.** jev/network errors fall back to the profile's `fallback` model — the
-  prompt is never lost. Subagent routing failure leaves the spawn untouched (role default).
+  prompt is never lost. If the profile cannot be loaded, the built-in fallback is used.
+  Failed profile loads are evicted after their retries; the next routing attempt retries without
+  restarting Pi. Fallback handling does not refetch the failed profile. Concurrent callers share
+  an in-flight load, and successful profiles remain cached for the process lifetime.
+  Subagent routing failure leaves the spawn untouched (role default).
 - **Transparency.** Each routing posts a UI notification with the top-3 probabilities and
   appends a session entry (`jev-auto-model:routed:v1`) with full probabilities.
 - **Defaults repair.** pi's `setModel` writes global defaults; after routing, the extension
@@ -152,8 +156,8 @@ Model ids must exist in your `models.json` as `provider/model-id`.
 
 ## Tests
 
-Run `npm test` for isolated resume-continuity, first-prompt routing, and model/effort
-policy-separation regressions.
+Run `npm test` for isolated resume-continuity, first-prompt routing, model/effort
+policy-separation, and profile-cache recovery regressions.
 The tests use temporary configuration and stub network calls; they require no credentials.
 
 ## License
