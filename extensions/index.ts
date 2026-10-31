@@ -7,6 +7,12 @@
  *   message: jev picks the model (choice question over the profile), then picks the
  *   thinking level for that model (second choice question). The selection pins the
  *   session; later manual changes are respected.
+ * - Sampling is deliberately asymmetric. The model is sampled from jev's distribution
+ *   when the profile sets `sampling`, because spreading sessions across models populates
+ *   the per-(role, model) rating cells the feedback loop scores. The thinking level is
+ *   always jev's argmax: ratings are keyed by (role, model) only, with `thinking_effort`
+ *   retained as qualitative context and never as a scoring key, so a sampled level buys
+ *   no measurable evidence while it does silently change how much the model thinks.
  * - Subagent routing happens in the parent: tool_call on subagent_spawn with a
  *   placeholder (or absent) model is resolved against the subagent profile and the
  *   args are mutated to a concrete provider/model:level before dispatch.
@@ -137,7 +143,10 @@ async function jevSelect(cfg, profile, state) {
       level: { type: "choice", instructions: instr, criteria: entry.levels },
     });
     levelProbs = a2.answers.level.probabilities;
-    level = (profile.sampling === true && sampleFrom(levelProbs)) || a2.answers.level.choice;
+    // Deterministic on purpose: argmax regardless of the profile's sampling policy.
+    // A sampled level adds no feedback signal (ratings are per role+model) and can
+    // drop a thinking task to `off` when the argmax was `high`.
+    level = a2.answers.level.choice;
     if (!entry.levels[level]) level = entry.default_level ?? levelIds[0];
   }
   return { ...splitModelId(chosenId), level, modelProbs, levelProbs };

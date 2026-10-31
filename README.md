@@ -125,9 +125,13 @@ A profile is the whole routing policy, as data. See `examples/profile.example.js
   criteria for the selected model." Older profiles work unchanged; `when` is never a fallback.
 - `levels` — per-model thinking-level criteria (second jev question). One level = no second call.
 - `fallback` — used when jev or the network fails; the session still works.
-- `sampling` — optional, default `false`. When `true`, model and level are sampled from
-  jev's probability distribution instead of argmax: a fan-out of similar subagent tasks
-  spreads across suitable models instead of all landing on the same pick.
+- `sampling` — optional, default `false`. When `true`, the **model** is sampled from jev's
+  probability distribution instead of argmax: a fan-out of similar subagent tasks spreads
+  across suitable models instead of all landing on the same pick. The **thinking level is
+  never sampled** — it is always jev's argmax. Spreading model choices populates the
+  per-(role, model) rating cells the feedback loop scores; ratings are not keyed by effort,
+  so a sampled level would add no measurable evidence while it silently changed how much
+  the model reasons (a 0.10 mass on `off` can drop a thinking task to no reasoning at all).
 
 Model ids must exist in your `models.json` as `provider/model-id`.
 

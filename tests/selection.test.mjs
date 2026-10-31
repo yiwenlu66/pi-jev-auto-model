@@ -56,7 +56,7 @@ function profileFixture() {
   };
 }
 
-async function route(profile, { levelChoice = "medium", failEffort = false, spawn = false } = {}) {
+async function route(profile, { levelChoice = "medium", failEffort = false, spawn = false, modelChoice = modelId, modelProbs = { [modelId]: 1 } } = {}) {
   const requests = [];
   const markers = [];
   let profileFetches = 0;
@@ -70,7 +70,7 @@ async function route(profile, { levelChoice = "medium", failEffort = false, spaw
     requests.push(body);
     if (body.questions.model) {
       return { ok: true, json: async () => ({ answers: { model: {
-        choice: modelId, probabilities: { [modelId]: 1 },
+        choice: modelChoice, probabilities: modelProbs,
       } } }) };
     }
     if (failEffort) throw new Error("fixture effort network failure");
@@ -162,13 +162,33 @@ test("invalid returned level without default_level still uses first level", asyn
   assert.equal(result.level, "medium");
 });
 
-test("sampling still selects effort from probabilities instead of the returned choice", async () => {
+test("sampling keeps the effort level deterministic: argmax, never a draw", async () => {
   const profile = { ...profileFixture(), sampling: true };
   Math.random = () => 0.5;
   try {
+    // Fixture probabilities are medium:1 / high:0, so a draw would return "medium".
     const result = await route(profile, { levelChoice: "high" });
     assertQuestions(result, profile, defaultEffort);
-    assert.equal(result.level, "medium");
+    assert.equal(result.level, "high");
+  } finally {
+    Math.random = previousRandom;
+  }
+});
+
+test("sampling still draws the model from probabilities instead of the returned choice", async () => {
+  const profile = { ...profileFixture(), sampling: true };
+  Math.random = () => 0.5;
+  try {
+    // Model probabilities are fixture/model 0.1 vs fixture/alternative 0.9, and the
+    // returned choice is the first, so only sampling can reach the alternative.
+    const result = await route(profile, {
+      modelChoice: modelId,
+      modelProbs: { [modelId]: 0.1, [alternativeId]: 0.9 },
+    });
+    assert.equal(result.active, alternative);
+    // The alternative offers a single level, so no effort question is asked.
+    assert.equal(result.requests.length, 1);
+    assert.equal(result.level, "high");
   } finally {
     Math.random = previousRandom;
   }
